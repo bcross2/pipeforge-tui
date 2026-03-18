@@ -57,7 +57,7 @@ func SimulateStep(lines []string, block Block) []string {
 		}
 		var result []string
 		for _, line := range lines {
-			fields := strings.Split(line, delim)
+			fields := CSVSplit(line, delim)
 			if cond != "" && !evalAwkCondition(cond, fields) {
 				continue
 			}
@@ -97,7 +97,7 @@ func SimulateStep(lines []string, block Block) []string {
 		groups := make(map[string]*groupAcc)
 		var order []string
 		for i, line := range lines {
-			fields := strings.Split(line, delim)
+			fields := CSVSplit(line, delim)
 			if keyIdx >= len(fields) {
 				continue
 			}
@@ -156,7 +156,7 @@ func SimulateStep(lines []string, block Block) []string {
 		fieldList := ParseFields(f)
 		var result []string
 		for _, line := range lines {
-			parts := strings.Split(line, delim)
+			parts := CSVSplit(line, delim)
 			var selected []string
 			for _, fi := range fieldList {
 				if fi-1 < len(parts) {
@@ -290,7 +290,7 @@ func SimulateStep(lines []string, block Block) []string {
 		rightMap := make(map[string][]rightEntry)
 		var rightKeys []string
 		for _, line := range rightLines {
-			fields := strings.Split(line, delim)
+			fields := CSVSplit(line, delim)
 			if rightCol >= len(fields) {
 				continue
 			}
@@ -312,7 +312,7 @@ func SimulateStep(lines []string, block Block) []string {
 		rightMatched := make(map[string]bool)
 		var joinResult []string
 		for _, line := range lines {
-			fields := strings.Split(line, delim)
+			fields := CSVSplit(line, delim)
 			if leftCol >= len(fields) {
 				continue
 			}
@@ -321,7 +321,7 @@ func SimulateStep(lines []string, block Block) []string {
 				rightMatched[key] = true
 				for _, e := range entries {
 					combined := append(fields, e.fields...)
-					joinResult = append(joinResult, strings.Join(combined, delim))
+					joinResult = append(joinResult, CSVJoin(combined, delim))
 				}
 			} else if mode == "left" || mode == "full" {
 				// pad with empty fields for unmatched left row
@@ -334,7 +334,7 @@ func SimulateStep(lines []string, block Block) []string {
 				}
 				padded := make([]string, padCount)
 				combined := append(fields, padded...)
-				joinResult = append(joinResult, strings.Join(combined, delim))
+				joinResult = append(joinResult, CSVJoin(combined, delim))
 			}
 		}
 
@@ -342,7 +342,7 @@ func SimulateStep(lines []string, block Block) []string {
 		if mode == "right" || mode == "full" {
 			leftWidth := 0
 			if len(lines) > 0 {
-				leftWidth = len(strings.Split(lines[0], delim))
+				leftWidth = len(CSVSplit(lines[0], delim))
 			}
 			for _, key := range rightKeys {
 				if !rightMatched[key] {
@@ -353,7 +353,7 @@ func SimulateStep(lines []string, block Block) []string {
 							padded[leftCol] = key
 						}
 						combined := append(padded, e.fields...)
-						joinResult = append(joinResult, strings.Join(combined, delim))
+						joinResult = append(joinResult, CSVJoin(combined, delim))
 					}
 				}
 			}
@@ -450,7 +450,7 @@ func SimulateStep(lines []string, block Block) []string {
 		var result []string
 		for _, line := range lines {
 			// check if line is blank (all fields empty)
-			fields := strings.Split(line, delim)
+			fields := CSVSplit(line, delim)
 			blank := true
 			for _, f := range fields {
 				if strings.TrimSpace(f) != "" {
@@ -682,7 +682,7 @@ func SimulateStep(lines []string, block Block) []string {
 		var order []string
 
 		for _, line := range dataLines {
-			fields := strings.Split(line, delim)
+			fields := CSVSplit(line, delim)
 			var keyParts []string
 			for _, gi := range groupCols {
 				if gi < len(fields) {
@@ -966,7 +966,7 @@ func evalAwkAction(action string, fields []string, delim string) string {
 	re := regexp.MustCompile(`print\s+(.*)`)
 	m := re.FindStringSubmatch(action)
 	if m == nil {
-		return strings.Join(fields, delim)
+		return CSVJoin(fields, delim)
 	}
 	tokens := tokenizeAwkExpr(m[1])
 	fieldRe := regexp.MustCompile(`^\$(\d+)$`)
@@ -975,7 +975,7 @@ func evalAwkAction(action string, fields []string, delim string) string {
 		if fm := fieldRe.FindStringSubmatch(tok); fm != nil {
 			idx, _ := strconv.Atoi(fm[1])
 			if idx == 0 {
-				result = append(result, strings.Join(fields, delim))
+				result = append(result, CSVJoin(fields, delim))
 			} else if idx-1 < len(fields) {
 				result = append(result, fields[idx-1])
 			} else {

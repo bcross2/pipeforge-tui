@@ -188,6 +188,60 @@ func TestTableSingleColumn(t *testing.T) {
 	}
 }
 
+func TestCSVSplit(t *testing.T) {
+	tests := []struct {
+		name   string
+		line   string
+		expect []string
+	}{
+		{
+			name:   "simple",
+			line:   "Alice,North,500",
+			expect: []string{"Alice", "North", "500"},
+		},
+		{
+			name:   "quoted field with comma",
+			line:   `"Acme, Inc.",North,500`,
+			expect: []string{"Acme, Inc.", "North", "500"},
+		},
+		{
+			name:   "quoted field with quotes inside",
+			line:   `"He said ""hello""",North,500`,
+			expect: []string{`He said "hello"`, "North", "500"},
+		},
+		{
+			name:   "empty fields",
+			line:   "Alice,,500",
+			expect: []string{"Alice", "", "500"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CSVSplit(tt.line, ",")
+			if !reflect.DeepEqual(got, tt.expect) {
+				t.Errorf("got %v, want %v", got, tt.expect)
+			}
+		})
+	}
+}
+
+func TestGroupWithQuotedFields(t *testing.T) {
+	lines := []string{
+		`"Acme, Inc.",500`,
+		`"Acme, Inc.",300`,
+		`"Bob Corp",200`,
+	}
+	block := Block{Type: "group", Config: map[string]any{
+		"keyCol": "1", "valCol": "2", "agg": "sum", "delimiter": ",",
+	}}
+	result := SimulateStep(lines, block)
+
+	// should group "Acme, Inc." correctly, not split on the comma inside quotes
+	if len(result) != 2 {
+		t.Fatalf("got %d groups, want 2 (got: %v)", len(result), result)
+	}
+}
+
 func TestSkipHeaderRow(t *testing.T) {
 	tests := []struct {
 		name   string

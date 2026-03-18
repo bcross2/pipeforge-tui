@@ -1,10 +1,39 @@
 package pipeline
 
 import (
+	"encoding/csv"
 	"fmt"
 	"strconv"
 	"strings"
 )
+
+// CSVSplit parses a single CSV line respecting quoted fields.
+// Falls back to strings.Split if the delimiter is not a comma
+// or if csv parsing fails.
+func CSVSplit(line string, delim string) []string {
+	if delim != "," {
+		return strings.Split(line, delim)
+	}
+	r := csv.NewReader(strings.NewReader(line))
+	r.LazyQuotes = true
+	fields, err := r.Read()
+	if err != nil {
+		return strings.Split(line, delim)
+	}
+	return fields
+}
+
+// CSVJoin produces a CSV line, quoting fields that contain the delimiter.
+func CSVJoin(fields []string, delim string) string {
+	if delim != "," {
+		return strings.Join(fields, delim)
+	}
+	var b strings.Builder
+	w := csv.NewWriter(&b)
+	w.Write(fields)
+	w.Flush()
+	return strings.TrimRight(b.String(), "\n")
+}
 
 func ShellQuote(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
