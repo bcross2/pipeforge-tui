@@ -93,22 +93,32 @@ func SimulateStep(lines []string, block Block) []string {
 		}
 		groups := make(map[string]*groupAcc)
 		var order []string
-		for _, line := range lines {
+		for i, line := range lines {
 			fields := strings.Split(line, delim)
 			if keyIdx >= len(fields) {
 				continue
 			}
-			key := fields[keyIdx]
-			val := 0.0
-			if valIdx < len(fields) {
-				val, _ = strconv.ParseFloat(strings.TrimSpace(fields[valIdx]), 64)
+			// skip header row: if the first line's value column is not numeric, skip it
+			if i == 0 && valIdx < len(fields) {
+				if _, err := strconv.ParseFloat(strings.TrimSpace(fields[valIdx]), 64); err != nil {
+					continue
+				}
 			}
+			key := fields[keyIdx]
 			if _, ok := groups[key]; !ok {
 				groups[key] = &groupAcc{}
 				order = append(order, key)
 			}
-			groups[key].sum += val
-			groups[key].count++
+			// treat empty or non-numeric values as null — skip in aggregation
+			if valIdx < len(fields) {
+				raw := strings.TrimSpace(fields[valIdx])
+				if raw != "" {
+					if val, err := strconv.ParseFloat(raw, 64); err == nil {
+						groups[key].sum += val
+						groups[key].count++
+					}
+				}
+			}
 		}
 		var result []string
 		for _, key := range order {
