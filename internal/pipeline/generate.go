@@ -238,6 +238,19 @@ func GenerateCommand(blocks []Block, inputFile string) string {
 				cmd = "cat " + file + " | " + cmd
 			}
 
+		case "table":
+			target := getInt(c, "index", 1)
+			delim := getString(c, "delimiter")
+			if delim == "" {
+				delim = ","
+			}
+			body := fmt.Sprintf(`BEGIN{tbl=0;bd=1;pn=0} {blank=1;for(i=1;i<=NF;i++)if($i!="")blank=0; if(blank){in_t=0;bd=1;pn=0;next} ne=0;for(i=1;i<=NF;i++)if($i!="")ne++; if(pn){if(ne>1){tbl++;in_t=1;pn=0;bd=0}else{tbl++;in_t=1;pn=0;bd=0;if(tbl==%d)print pl}} else if(bd){if(ne<=1){pl=$0;pn=1;bd=0;next}tbl++;in_t=1;bd=0} if(in_t&&tbl==%d)print}`, target, target)
+			pieces := []string{"awk", "-F" + ShellQuote(delim), ShellQuote(body)}
+			if file != "" {
+				pieces = append(pieces, file)
+			}
+			cmd = strings.Join(pieces, " ")
+
 		case "wc":
 			var flags []string
 			if getBool(c, "lines") {

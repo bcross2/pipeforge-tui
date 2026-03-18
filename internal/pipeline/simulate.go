@@ -238,6 +238,76 @@ func SimulateStep(lines []string, block Block) []string {
 		}
 		return result
 
+	case "table":
+		target := getInt(c, "index", 1)
+		delim := getString(c, "delimiter")
+		if delim == "" {
+			delim = ","
+		}
+		tableNum := 0
+		inTable := false
+		atBoundary := true // start of input counts as a boundary
+		hasPending := false
+		pendingLine := ""
+		var result []string
+		for _, line := range lines {
+			// check if line is blank (all fields empty)
+			fields := strings.Split(line, delim)
+			blank := true
+			for _, f := range fields {
+				if strings.TrimSpace(f) != "" {
+					blank = false
+					break
+				}
+			}
+			if blank {
+				inTable = false
+				atBoundary = true
+				hasPending = false
+				continue
+			}
+			nonEmpty := 0
+			for _, f := range fields {
+				if strings.TrimSpace(f) != "" {
+					nonEmpty++
+				}
+			}
+			if hasPending {
+				if nonEmpty > 1 {
+					// pending was a title, this row is a header — new table
+					tableNum++
+					inTable = true
+					hasPending = false
+					atBoundary = false
+				} else {
+					// pending was a header for a single-column table
+					tableNum++
+					inTable = true
+					hasPending = false
+					atBoundary = false
+					if tableNum == target {
+						result = append(result, pendingLine)
+					}
+				}
+			} else if atBoundary {
+				if nonEmpty <= 1 {
+					// might be a title — buffer it and wait for next row
+					pendingLine = line
+					hasPending = true
+					atBoundary = false
+					continue
+				}
+				// multi-cell header — new table starts
+				tableNum++
+				inTable = true
+				atBoundary = false
+			}
+			if inTable && tableNum == target {
+				result = append(result, line)
+			}
+		}
+		return result
+
 	case "head":
 		n := getInt(c, "lines", 5)
 		if n >= len(lines) {

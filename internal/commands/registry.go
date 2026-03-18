@@ -115,6 +115,14 @@ var Registry = map[string]CommandDef{
 			{Key: "chars", Type: FieldCheck, Label: "Count characters (-c)"},
 		},
 	},
+	"table": {
+		Label: "table", Excel: "Extract table from sheet", Group: "filter", Icon: "Tb",
+		Defaults: map[string]any{"index": 1, "delimiter": ","},
+		Config: []ConfigField{
+			{Key: "index", Type: FieldNumber, Label: "Table number", Placeholder: "e.g. 1, 2, 3"},
+			{Key: "delimiter", Type: FieldText, Label: "Delimiter", Placeholder: ","},
+		},
+	},
 	"head": {
 		Label: "head", Excel: "Top N rows", Group: "limit", Icon: "Hd",
 		Defaults: map[string]any{"lines": 5},
@@ -160,7 +168,7 @@ func OrderedCommands() []string {
 }
 
 func commandKeysForGroup(group string) []string {
-	order := []string{"grep", "awk", "cut", "sed", "tr", "group", "sort", "uniq", "wc", "head", "tail", "tee", "xargs"}
+	order := []string{"grep", "awk", "table", "cut", "sed", "tr", "group", "sort", "uniq", "wc", "head", "tail", "tee", "xargs"}
 	var result []string
 	for _, k := range order {
 		if def, ok := Registry[k]; ok && def.Group == group {
