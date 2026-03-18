@@ -442,29 +442,61 @@ func compareAwkValues(left, right, op string) bool {
 	return true
 }
 
+func tokenizeAwkExpr(expr string) []string {
+	var tokens []string
+	i := 0
+	for i < len(expr) {
+		// skip whitespace
+		if expr[i] == ' ' || expr[i] == '\t' {
+			i++
+			continue
+		}
+		// quoted string: collect until closing quote
+		if expr[i] == '"' {
+			j := i + 1
+			for j < len(expr) && expr[j] != '"' {
+				j++
+			}
+			if j < len(expr) {
+				j++ // include closing quote
+			}
+			tokens = append(tokens, expr[i:j])
+			i = j
+			continue
+		}
+		// unquoted token: collect until whitespace or quote
+		j := i
+		for j < len(expr) && expr[j] != ' ' && expr[j] != '\t' && expr[j] != '"' {
+			j++
+		}
+		tokens = append(tokens, expr[i:j])
+		i = j
+	}
+	return tokens
+}
+
 func evalAwkAction(action string, fields []string, delim string) string {
 	re := regexp.MustCompile(`print\s+(.*)`)
 	m := re.FindStringSubmatch(action)
 	if m == nil {
 		return strings.Join(fields, delim)
 	}
-	parts := strings.Split(m[1], ",")
+	tokens := tokenizeAwkExpr(m[1])
+	fieldRe := regexp.MustCompile(`^\$(\d+)$`)
 	var result []string
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		fieldRe := regexp.MustCompile(`^\$(\d+)$`)
-		if fm := fieldRe.FindStringSubmatch(p); fm != nil {
+	for _, tok := range tokens {
+		if fm := fieldRe.FindStringSubmatch(tok); fm != nil {
 			idx, _ := strconv.Atoi(fm[1])
 			if idx-1 < len(fields) {
 				result = append(result, fields[idx-1])
 			} else {
 				result = append(result, "")
 			}
-		} else if len(p) >= 2 && p[0] == '"' && p[len(p)-1] == '"' {
-			result = append(result, p[1:len(p)-1])
+		} else if len(tok) >= 2 && tok[0] == '"' && tok[len(tok)-1] == '"' {
+			result = append(result, tok[1:len(tok)-1])
 		} else {
-			result = append(result, p)
+			result = append(result, tok)
 		}
 	}
-	return strings.Join(result, " ")
+	return strings.Join(result, "")
 }
