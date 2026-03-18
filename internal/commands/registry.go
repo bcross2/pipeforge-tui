@@ -134,6 +134,23 @@ var Registry = map[string]CommandDef{
 			{Key: "delimiter", Type: FieldText, Label: "Delimiter", Placeholder: ","},
 		},
 	},
+	"comm": {
+		Label: "comm", Excel: "Compare lists", Group: "filter", Icon: "Cm",
+		Defaults: map[string]any{"file": "", "mode": "common", "autoSort": true},
+		Config: []ConfigField{
+			{Key: "file", Type: FieldText, Label: "File to compare against", Placeholder: "e.g. right.txt"},
+			{
+				Key: "mode", Type: FieldSelect, Label: "Output mode",
+				Options: []SelectOption{
+					{Value: "common", Label: "Common — lines in both"},
+					{Value: "left-only", Label: "Left only — lines only in left"},
+					{Value: "right-only", Label: "Right only — lines only in right"},
+					{Value: "all", Label: "All — three-column output"},
+				},
+			},
+			{Key: "autoSort", Type: FieldCheck, Label: "Auto-sort both inputs before comparing"},
+		},
+	},
 	"table": {
 		Label: "table", Excel: "Extract table from sheet", Group: "filter", Icon: "Tb",
 		Defaults: map[string]any{"index": 1, "delimiter": ","},
@@ -212,7 +229,7 @@ func OrderedCommands() []string {
 }
 
 func commandKeysForGroup(group string) []string {
-	order := []string{"grep", "awk", "join", "table", "cut", "sed", "tr", "group", "datamash", "sort", "uniq", "wc", "head", "tail", "tee", "xargs"}
+	order := []string{"grep", "awk", "join", "comm", "table", "cut", "sed", "tr", "group", "datamash", "sort", "uniq", "wc", "head", "tail", "tee", "xargs"}
 	var result []string
 	for _, k := range order {
 		if def, ok := Registry[k]; ok && def.Group == group {

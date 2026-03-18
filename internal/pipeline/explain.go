@@ -188,6 +188,23 @@ func explainBlock(block Block) string {
 		}
 		return fmt.Sprintf("Compute %s of column %s", op, col)
 
+	case "comm":
+		rightFile := getString(c, "file")
+		if rightFile == "" {
+			rightFile = "right file"
+		}
+		mode := getString(c, "mode")
+		switch mode {
+		case "left-only":
+			return fmt.Sprintf("Compare with %s, show lines only in left", rightFile)
+		case "right-only":
+			return fmt.Sprintf("Compare with %s, show lines only in right", rightFile)
+		case "all":
+			return fmt.Sprintf("Compare with %s, show all three columns", rightFile)
+		default:
+			return fmt.Sprintf("Compare with %s, show common lines", rightFile)
+		}
+
 	case "wc":
 		var parts []string
 		if getBool(c, "lines") || (!getBool(c, "words") && !getBool(c, "chars")) {

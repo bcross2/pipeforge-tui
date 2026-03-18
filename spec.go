@@ -111,6 +111,7 @@ func isBooleanFlag(s string) bool {
 		"placeholder": true,
 		"sortInput":   true,
 		"headerIn":    true,
+		"autoSort":    true,
 	}
 	return flags[s]
 }

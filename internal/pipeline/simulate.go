@@ -360,6 +360,82 @@ func SimulateStep(lines []string, block Block) []string {
 		}
 		return joinResult
 
+	case "comm":
+		rightFile := getString(c, "file")
+		if rightFile == "" {
+			return lines
+		}
+		raw, err := os.ReadFile(rightFile)
+		if err != nil {
+			return lines
+		}
+		rightLines := strings.Split(strings.TrimRight(string(raw), "\n\r"), "\n")
+
+		leftLines := make([]string, len(lines))
+		copy(leftLines, lines)
+		if getBool(c, "autoSort") {
+			sort.Strings(leftLines)
+			sort.Strings(rightLines)
+		}
+
+		mode := getString(c, "mode")
+		if mode == "" {
+			mode = "common"
+		}
+
+		leftSet := make(map[string]bool)
+		for _, l := range leftLines {
+			leftSet[l] = true
+		}
+		rightSet := make(map[string]bool)
+		for _, l := range rightLines {
+			rightSet[l] = true
+		}
+
+		var commResult []string
+		switch mode {
+		case "common":
+			for _, l := range leftLines {
+				if rightSet[l] {
+					commResult = append(commResult, l)
+				}
+			}
+		case "left-only":
+			for _, l := range leftLines {
+				if !rightSet[l] {
+					commResult = append(commResult, l)
+				}
+			}
+		case "right-only":
+			for _, l := range rightLines {
+				if !leftSet[l] {
+					commResult = append(commResult, l)
+				}
+			}
+		default: // "all"
+			i, j := 0, 0
+			for i < len(leftLines) && j < len(rightLines) {
+				if leftLines[i] < rightLines[j] {
+					commResult = append(commResult, leftLines[i])
+					i++
+				} else if leftLines[i] > rightLines[j] {
+					commResult = append(commResult, "\t"+rightLines[j])
+					j++
+				} else {
+					commResult = append(commResult, "\t\t"+leftLines[i])
+					i++
+					j++
+				}
+			}
+			for ; i < len(leftLines); i++ {
+				commResult = append(commResult, leftLines[i])
+			}
+			for ; j < len(rightLines); j++ {
+				commResult = append(commResult, "\t"+rightLines[j])
+			}
+		}
+		return commResult
+
 	case "table":
 		target := getInt(c, "index", 1)
 		delim := getString(c, "delimiter")

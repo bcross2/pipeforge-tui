@@ -289,6 +289,56 @@ func GenerateCommand(blocks []Block, inputFile string) string {
 				cmd = "sort -t" + ShellQuote(delim) + " -k" + leftCol + " | join " + strings.Join(joinFlags, " ") + " - <(" + rightCmd + ")"
 			}
 
+		case "comm":
+			rightFile := getString(c, "file")
+			if rightFile == "" {
+				rightFile = "right.txt"
+			}
+			mode := getString(c, "mode")
+			var commFlags string
+			switch mode {
+			case "common":
+				commFlags = "-12"
+			case "left-only":
+				commFlags = "-23"
+			case "right-only":
+				commFlags = "-13"
+			}
+			autoSort := getBool(c, "autoSort")
+			if isFirst {
+				if autoSort {
+					pieces := []string{"comm"}
+					if commFlags != "" {
+						pieces = append(pieces, commFlags)
+					}
+					pieces = append(pieces, "<(sort "+file+")", "<(sort "+rightFile+")")
+					cmd = strings.Join(pieces, " ")
+				} else {
+					pieces := []string{"comm"}
+					if commFlags != "" {
+						pieces = append(pieces, commFlags)
+					}
+					pieces = append(pieces, file, rightFile)
+					cmd = strings.Join(pieces, " ")
+				}
+			} else {
+				if autoSort {
+					pieces := []string{"sort | comm"}
+					if commFlags != "" {
+						pieces = append(pieces, commFlags)
+					}
+					pieces = append(pieces, "-", "<(sort "+rightFile+")")
+					cmd = strings.Join(pieces, " ")
+				} else {
+					pieces := []string{"comm"}
+					if commFlags != "" {
+						pieces = append(pieces, commFlags)
+					}
+					pieces = append(pieces, "-", rightFile)
+					cmd = strings.Join(pieces, " ")
+				}
+			}
+
 		case "table":
 			target := getInt(c, "index", 1)
 			delim := getString(c, "delimiter")
