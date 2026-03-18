@@ -1,7 +1,9 @@
 package pipeline
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -237,6 +239,125 @@ func SimulateStep(lines []string, block Block) []string {
 			}
 		}
 		return result
+
+	case "join":
+		rightFile := getString(c, "file")
+		if rightFile == "" {
+			return lines
+		}
+		raw, err := os.ReadFile(rightFile)
+		if err != nil {
+			return lines
+		}
+		rightLines := strings.Split(strings.TrimRight(string(raw), "\n\r"), "\n")
+
+		// skip header rows before any processing
+		lines = skipHeaderRow(lines)
+		rightLines = skipHeaderRow(rightLines)
+
+		// run sub-pipeline on right side if provided (after header removal)
+		subBlocks := parseSubPipeline(c)
+		for _, sb := range subBlocks {
+			rightLines = SimulateStep(rightLines, sb)
+		}
+
+		leftCol := 0
+		if k := getString(c, "leftCol"); k != "" {
+			if n, err := strconv.Atoi(k); err == nil {
+				leftCol = n - 1
+			}
+		}
+		rightCol := 0
+		if k := getString(c, "rightCol"); k != "" {
+			if n, err := strconv.Atoi(k); err == nil {
+				rightCol = n - 1
+			}
+		}
+		mode := getString(c, "mode")
+		if mode == "" {
+			mode = "inner"
+		}
+		delim := getString(c, "delimiter")
+		if delim == "" {
+			delim = ","
+		}
+
+		// build right-side lookup: joinKey → []fields
+		type rightEntry struct {
+			fields []string
+		}
+		rightMap := make(map[string][]rightEntry)
+		var rightKeys []string
+		for _, line := range rightLines {
+			fields := strings.Split(line, delim)
+			if rightCol >= len(fields) {
+				continue
+			}
+			key := strings.TrimSpace(fields[rightCol])
+			if _, exists := rightMap[key]; !exists {
+				rightKeys = append(rightKeys, key)
+			}
+			// collect fields excluding the join column
+			var kept []string
+			for j, f := range fields {
+				if j != rightCol {
+					kept = append(kept, f)
+				}
+			}
+			rightMap[key] = append(rightMap[key], rightEntry{fields: kept})
+		}
+
+		// join
+		rightMatched := make(map[string]bool)
+		var joinResult []string
+		for _, line := range lines {
+			fields := strings.Split(line, delim)
+			if leftCol >= len(fields) {
+				continue
+			}
+			key := strings.TrimSpace(fields[leftCol])
+			if entries, ok := rightMap[key]; ok {
+				rightMatched[key] = true
+				for _, e := range entries {
+					combined := append(fields, e.fields...)
+					joinResult = append(joinResult, strings.Join(combined, delim))
+				}
+			} else if mode == "left" || mode == "full" {
+				// pad with empty fields for unmatched left row
+				padCount := 0
+				if len(rightMap) > 0 {
+					for _, entries := range rightMap {
+						padCount = len(entries[0].fields)
+						break
+					}
+				}
+				padded := make([]string, padCount)
+				combined := append(fields, padded...)
+				joinResult = append(joinResult, strings.Join(combined, delim))
+			}
+		}
+
+		// add unmatched right rows for right/full mode
+		if mode == "right" || mode == "full" {
+			leftWidth := 0
+			if len(lines) > 0 {
+				leftWidth = len(strings.Split(lines[0], delim))
+			}
+			for _, key := range rightKeys {
+				if !rightMatched[key] {
+					for _, e := range rightMap[key] {
+						padded := make([]string, leftWidth)
+						// put the join key in the left join column
+						if leftCol < leftWidth {
+							padded[leftCol] = key
+						}
+						combined := append(padded, e.fields...)
+						joinResult = append(joinResult, strings.Join(combined, delim))
+					}
+				}
+			}
+		}
+		return joinResult
 
 	case "table":
 		target := getInt(c, "index", 1)
@@ -520,6 +641,36 @@ func compareAwkValues(left, right, op string) bool {
 		return left <= right
 	}
 	return true
+}
+
+func skipHeaderRow(lines []string) []string {
+	if len(lines) == 0 {
+		return lines
+	}
+	fields := strings.Split(lines[0], ",")
+	for _, f := range fields {
+		if _, err := strconv.ParseFloat(strings.TrimSpace(f), 64); err == nil {
+			return lines // at least one numeric field — not a header
+		}
+	}
+	return lines[1:] // all non-numeric — skip it
+}
+
+func parseSubPipeline(config map[string]any) []Block {
+	raw, ok := config["pipeline"]
+	if !ok {
+		return nil
+	}
+	// re-marshal and unmarshal to get proper []Block
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil
+	}
+	var blocks []Block
+	if err := json.Unmarshal(data, &blocks); err != nil {
+		return nil
+	}
+	return blocks
 }
 
 func tokenizeAwkExpr(expr string) []string {

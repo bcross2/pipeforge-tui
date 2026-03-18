@@ -153,6 +153,18 @@ func GetConfigPreview(b Block) string {
 			s = "-I" + rs + " "
 		}
 		return s + cmd
+	case "join":
+		f := b.GetString("file")
+		if f == "" {
+			return ""
+		}
+		return fmt.Sprintf("%s on %s=%s", b.GetString("mode"), b.GetString("leftCol"), b.GetString("rightCol"))
+	case "table":
+		n := b.GetInt("index")
+		if n > 0 {
+			return fmt.Sprintf("table %d", n)
+		}
+		return ""
 	case "wc":
 		var flags []string
 		if b.GetBool("lines") {

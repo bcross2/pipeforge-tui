@@ -238,6 +238,57 @@ func GenerateCommand(blocks []Block, inputFile string) string {
 				cmd = "cat " + file + " | " + cmd
 			}
 
+		case "join":
+			rightFile := getString(c, "file")
+			if rightFile == "" {
+				rightFile = "right.csv"
+			}
+			leftCol := getString(c, "leftCol")
+			if leftCol == "" {
+				leftCol = "1"
+			}
+			rightCol := getString(c, "rightCol")
+			if rightCol == "" {
+				rightCol = "1"
+			}
+			mode := getString(c, "mode")
+			delim := getString(c, "delimiter")
+			if delim == "" {
+				delim = ","
+			}
+
+			var joinFlags []string
+			joinFlags = append(joinFlags, "-t"+ShellQuote(delim))
+			joinFlags = append(joinFlags, "-1", leftCol, "-2", rightCol)
+			switch mode {
+			case "left":
+				joinFlags = append(joinFlags, "-a", "1")
+			case "right":
+				joinFlags = append(joinFlags, "-a", "2")
+			case "full":
+				joinFlags = append(joinFlags, "-a", "1", "-a", "2")
+			}
+			joinFlags = append(joinFlags, "-e", "''")
+			joinFlags = append(joinFlags, "-o", "auto")
+
+			// build right-side command
+			subBlocks := parseSubPipeline(c)
+			var rightCmd string
+			if len(subBlocks) > 0 {
+				rightCmd = GenerateCommand(subBlocks, rightFile) + " | sort -t" + ShellQuote(delim) + " -k" + rightCol
+			} else {
+				rightCmd = "sort -t" + ShellQuote(delim) + " -k" + rightCol + " " + rightFile
+			}
+
+			if isFirst {
+				// both sides via process substitution
+				leftCmd := "sort -t" + ShellQuote(delim) + " -k" + leftCol + " " + file
+				cmd = "join " + strings.Join(joinFlags, " ") + " <(" + leftCmd + ") <(" + rightCmd + ")"
+			} else {
+				// left from stdin (previous pipe), right via process substitution
+				cmd = "sort -t" + ShellQuote(delim) + " -k" + leftCol + " | join " + strings.Join(joinFlags, " ") + " - <(" + rightCmd + ")"
+			}
+
 		case "table":
 			target := getInt(c, "index", 1)
 			delim := getString(c, "delimiter")

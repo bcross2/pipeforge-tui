@@ -115,6 +115,25 @@ var Registry = map[string]CommandDef{
 			{Key: "chars", Type: FieldCheck, Label: "Count characters (-c)"},
 		},
 	},
+	"join": {
+		Label: "join", Excel: "VLOOKUP / merge", Group: "filter", Icon: "Jn",
+		Defaults: map[string]any{"file": "", "leftCol": "1", "rightCol": "1", "mode": "inner", "delimiter": ","},
+		Config: []ConfigField{
+			{Key: "file", Type: FieldText, Label: "Right-side file", Placeholder: "e.g. vendors.csv"},
+			{Key: "leftCol", Type: FieldText, Label: "Left join column", Placeholder: "e.g. 2"},
+			{Key: "rightCol", Type: FieldText, Label: "Right join column", Placeholder: "e.g. 1"},
+			{
+				Key: "mode", Type: FieldSelect, Label: "Join mode",
+				Options: []SelectOption{
+					{Value: "inner", Label: "Inner — only matching rows"},
+					{Value: "left", Label: "Left — all left rows, match or not"},
+					{Value: "right", Label: "Right — all right rows, match or not"},
+					{Value: "full", Label: "Full — all rows from both sides"},
+				},
+			},
+			{Key: "delimiter", Type: FieldText, Label: "Delimiter", Placeholder: ","},
+		},
+	},
 	"table": {
 		Label: "table", Excel: "Extract table from sheet", Group: "filter", Icon: "Tb",
 		Defaults: map[string]any{"index": 1, "delimiter": ","},
@@ -168,7 +187,7 @@ func OrderedCommands() []string {
 }
 
 func commandKeysForGroup(group string) []string {
-	order := []string{"grep", "awk", "table", "cut", "sed", "tr", "group", "sort", "uniq", "wc", "head", "tail", "tee", "xargs"}
+	order := []string{"grep", "awk", "join", "table", "cut", "sed", "tr", "group", "sort", "uniq", "wc", "head", "tail", "tee", "xargs"}
 	var result []string
 	for _, k := range order {
 		if def, ok := Registry[k]; ok && def.Group == group {
