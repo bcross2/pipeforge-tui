@@ -974,7 +974,9 @@ func evalAwkAction(action string, fields []string, delim string) string {
 	for _, tok := range tokens {
 		if fm := fieldRe.FindStringSubmatch(tok); fm != nil {
 			idx, _ := strconv.Atoi(fm[1])
-			if idx-1 < len(fields) {
+			if idx == 0 {
+				result = append(result, strings.Join(fields, delim))
+			} else if idx-1 < len(fields) {
 				result = append(result, fields[idx-1])
 			} else {
 				result = append(result, "")
