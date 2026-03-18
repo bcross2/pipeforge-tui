@@ -293,7 +293,7 @@ Options:
 SPEC format:
   "command:key=value,flag | command:key=value"
 
-  Commands: grep, awk, cut, sed, tr, sort, uniq, wc, head, tail, tee, xargs
+  Commands: grep, awk, cut, sed, tr, sort, uniq, wc, head, tail, tee, xargs, datamash
 
   Boolean flags (no =value):
     grep:pattern=hello,ignoreCase,invert

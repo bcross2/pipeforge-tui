@@ -3,6 +3,7 @@ package pipeline
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"sort"
@@ -564,6 +565,178 @@ func SimulateStep(lines []string, block Block) []string {
 		}
 		return result
 
+	case "datamash":
+		delim := getString(c, "delimiter")
+		if delim == "" {
+			delim = ","
+		}
+		groupByStr := getString(c, "groupBy")
+		op := getString(c, "op")
+		if op == "" {
+			op = "sum"
+		}
+		colStr := getString(c, "col")
+		colIdx := 0
+		if colStr != "" {
+			if n, err := strconv.Atoi(colStr); err == nil {
+				colIdx = n - 1
+			}
+		}
+
+		// Parse group-by columns (e.g. "1,3")
+		var groupCols []int
+		if groupByStr != "" {
+			for _, part := range strings.Split(groupByStr, ",") {
+				if n, err := strconv.Atoi(strings.TrimSpace(part)); err == nil {
+					groupCols = append(groupCols, n-1)
+				}
+			}
+		}
+
+		dataLines := lines
+		if getBool(c, "headerIn") && len(dataLines) > 0 {
+			dataLines = dataLines[1:]
+		}
+
+		type groupAcc struct {
+			values []float64
+			strs   []string
+		}
+		groups := make(map[string]*groupAcc)
+		var order []string
+
+		for _, line := range dataLines {
+			fields := strings.Split(line, delim)
+			var keyParts []string
+			for _, gi := range groupCols {
+				if gi < len(fields) {
+					keyParts = append(keyParts, strings.TrimSpace(fields[gi]))
+				}
+			}
+			key := strings.Join(keyParts, "\t")
+			if _, ok := groups[key]; !ok {
+				groups[key] = &groupAcc{}
+				order = append(order, key)
+			}
+			g := groups[key]
+			if colIdx < len(fields) {
+				raw := strings.TrimSpace(fields[colIdx])
+				g.strs = append(g.strs, raw)
+				if val, err := strconv.ParseFloat(raw, 64); err == nil {
+					g.values = append(g.values, val)
+				}
+			}
+		}
+
+		var result []string
+		for _, key := range order {
+			g := groups[key]
+			var agg string
+			switch op {
+			case "sum":
+				s := 0.0
+				for _, v := range g.values {
+					s += v
+				}
+				agg = simFormatNum(s)
+			case "mean":
+				if len(g.values) == 0 {
+					agg = "0"
+				} else {
+					s := 0.0
+					for _, v := range g.values {
+						s += v
+					}
+					agg = fmt.Sprintf("%.2f", s/float64(len(g.values)))
+				}
+			case "median":
+				if len(g.values) == 0 {
+					agg = "0"
+				} else {
+					sorted := make([]float64, len(g.values))
+					copy(sorted, g.values)
+					sort.Float64s(sorted)
+					mid := len(sorted) / 2
+					if len(sorted)%2 == 0 {
+						agg = fmt.Sprintf("%.2f", (sorted[mid-1]+sorted[mid])/2)
+					} else {
+						agg = simFormatNum(sorted[mid])
+					}
+				}
+			case "min":
+				if len(g.values) == 0 {
+					agg = "0"
+				} else {
+					m := g.values[0]
+					for _, v := range g.values[1:] {
+						if v < m {
+							m = v
+						}
+					}
+					agg = simFormatNum(m)
+				}
+			case "max":
+				if len(g.values) == 0 {
+					agg = "0"
+				} else {
+					m := g.values[0]
+					for _, v := range g.values[1:] {
+						if v > m {
+							m = v
+						}
+					}
+					agg = simFormatNum(m)
+				}
+			case "count":
+				agg = strconv.Itoa(len(g.strs))
+			case "countunique":
+				seen := make(map[string]bool)
+				for _, s := range g.strs {
+					seen[s] = true
+				}
+				agg = strconv.Itoa(len(seen))
+			case "stdev":
+				if len(g.values) == 0 {
+					agg = "0"
+				} else {
+					mean := 0.0
+					for _, v := range g.values {
+						mean += v
+					}
+					mean /= float64(len(g.values))
+					variance := 0.0
+					for _, v := range g.values {
+						d := v - mean
+						variance += d * d
+					}
+					variance /= float64(len(g.values))
+					agg = fmt.Sprintf("%.2f", math.Sqrt(variance))
+				}
+			case "mode":
+				freq := make(map[string]int)
+				for _, s := range g.strs {
+					freq[s]++
+				}
+				maxFreq := 0
+				modeVal := ""
+				for s, f := range freq {
+					if f > maxFreq {
+						maxFreq = f
+						modeVal = s
+					}
+				}
+				agg = modeVal
+			default:
+				agg = "?"
+			}
+			if key != "" {
+				result = append(result, strings.ReplaceAll(key, "\t", delim)+delim+agg)
+			} else {
+				result = append(result, agg)
+			}
+		}
+		return result
+
 	case "wc":
 		var parts []string
 		l := getBool(c, "lines")
@@ -589,6 +762,13 @@ func SimulateStep(lines []string, block Block) []string {
 		return []string{strings.Join(parts, "\t")}
 	}
 	return lines
+}
+
+func simFormatNum(v float64) string {
+	if v == float64(int64(v)) {
+		return fmt.Sprintf("%.0f", v)
+	}
+	return fmt.Sprintf("%.2f", v)
 }
 
 func evalAwkCondition(cond string, fields []string) bool {

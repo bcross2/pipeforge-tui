@@ -302,6 +302,38 @@ func GenerateCommand(blocks []Block, inputFile string) string {
 			}
 			cmd = strings.Join(pieces, " ")
 
+		case "datamash":
+			var flags []string
+			delim := getString(c, "delimiter")
+			if delim != "" {
+				flags = append(flags, "-t"+ShellQuote(delim))
+			}
+			if getBool(c, "sortInput") {
+				flags = append(flags, "-s")
+			}
+			if getBool(c, "headerIn") {
+				flags = append(flags, "--header-in")
+			}
+			groupBy := getString(c, "groupBy")
+			if groupBy != "" {
+				flags = append(flags, "-g", groupBy)
+			}
+			op := getString(c, "op")
+			if op == "" {
+				op = "sum"
+			}
+			col := getString(c, "col")
+			if col == "" {
+				col = "1"
+			}
+			pieces := []string{"datamash"}
+			pieces = append(pieces, flags...)
+			pieces = append(pieces, op, col)
+			cmd = strings.Join(pieces, " ")
+			if isFirst {
+				cmd = "cat " + file + " | " + cmd
+			}
+
 		case "wc":
 			var flags []string
 			if getBool(c, "lines") {

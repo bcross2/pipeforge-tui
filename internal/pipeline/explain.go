@@ -173,6 +173,21 @@ func explainBlock(block Block) string {
 		}
 		return fmt.Sprintf("Run '%s' with each row as argument", target)
 
+	case "datamash":
+		op := getString(c, "op")
+		if op == "" {
+			op = "sum"
+		}
+		col := getString(c, "col")
+		if col == "" {
+			col = "1"
+		}
+		groupBy := getString(c, "groupBy")
+		if groupBy != "" {
+			return fmt.Sprintf("Group by column %s, %s of column %s", groupBy, op, col)
+		}
+		return fmt.Sprintf("Compute %s of column %s", op, col)
+
 	case "wc":
 		var parts []string
 		if getBool(c, "lines") || (!getBool(c, "words") && !getBool(c, "chars")) {

@@ -173,6 +173,31 @@ var Registry = map[string]CommandDef{
 			{Key: "maxArgs", Type: FieldText, Label: "Max args per call (-n)", Placeholder: "e.g. 1"},
 		},
 	},
+	"datamash": {
+		Label: "datamash", Excel: "Pivot Table stats", Group: "aggregate", Icon: "Dm",
+		Defaults: map[string]any{"groupBy": "", "op": "sum", "col": "", "delimiter": ",", "sortInput": true, "headerIn": false},
+		Config: []ConfigField{
+			{
+				Key: "op", Type: FieldSelect, Label: "Operation",
+				Options: []SelectOption{
+					{Value: "sum", Label: "Sum"},
+					{Value: "mean", Label: "Mean (average)"},
+					{Value: "median", Label: "Median"},
+					{Value: "min", Label: "Minimum"},
+					{Value: "max", Label: "Maximum"},
+					{Value: "count", Label: "Count"},
+					{Value: "countunique", Label: "Count unique"},
+					{Value: "stdev", Label: "Std deviation"},
+					{Value: "mode", Label: "Mode (most common)"},
+				},
+			},
+			{Key: "groupBy", Type: FieldText, Label: "Group by column (-g)", Placeholder: "e.g. 3 (empty = no grouping)"},
+			{Key: "col", Type: FieldText, Label: "Value column", Placeholder: "e.g. 4 (amount)"},
+			{Key: "delimiter", Type: FieldText, Label: "Delimiter (-t)", Placeholder: ","},
+			{Key: "sortInput", Type: FieldCheck, Label: "Sort input first (-s)"},
+			{Key: "headerIn", Type: FieldCheck, Label: "Skip header row (--header-in)"},
+		},
+	},
 }
 
 // OrderedCommands returns command keys in display order (by group).
@@ -187,7 +212,7 @@ func OrderedCommands() []string {
 }
 
 func commandKeysForGroup(group string) []string {
-	order := []string{"grep", "awk", "join", "table", "cut", "sed", "tr", "group", "sort", "uniq", "wc", "head", "tail", "tee", "xargs"}
+	order := []string{"grep", "awk", "join", "table", "cut", "sed", "tr", "group", "datamash", "sort", "uniq", "wc", "head", "tail", "tee", "xargs"}
 	var result []string
 	for _, k := range order {
 		if def, ok := Registry[k]; ok && def.Group == group {

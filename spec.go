@@ -109,6 +109,8 @@ func isBooleanFlag(s string) bool {
 		"duplicatesOnly": true, "lines": true, "words": true,
 		"chars": true, "squeeze": true, "delete": true,
 		"placeholder": true,
+		"sortInput":   true,
+		"headerIn":    true,
 	}
 	return flags[s]
 }
