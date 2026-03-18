@@ -3,9 +3,9 @@ package pipeline
 import "github.com/bcross2/pipeforge-tui/internal/commands"
 
 type Block struct {
-	ID     int
-	Type   string
-	Config map[string]any
+	ID     int            `json:"id"`
+	Type   string         `json:"type"`
+	Config map[string]any `json:"config"`
 }
 
 func NewBlock(id int, cmdType string) Block {

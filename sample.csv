@@ -1,0 +1,11 @@
+date,product,region,amount
+2026-01-05,Widget,North,150
+2026-01-08,Gadget,South,200
+2026-01-12,Widget,North,300
+2026-01-15,Gadget,East,175
+2026-01-20,Gizmo,North,120
+2026-01-25,Widget,South,250
+2026-02-01,Gadget,North,290
+2026-02-10,Gizmo,East,180
+2026-02-14,Widget,North,275
+2026-02-22,Gadget,South,225

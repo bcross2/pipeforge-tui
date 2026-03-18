@@ -9,7 +9,11 @@ import (
 	"github.com/bcross2/pipeforge-tui/internal/pipeline"
 )
 
-func RenderPreview(blocks []pipeline.Block, selectedIdx int, width int, fileData string, maxRows int) string {
+func RenderPreview(blocks []pipeline.Block, selectedIdx int, width int, fileData string, maxRows int, showExplain bool) string {
+	if showExplain {
+		return renderExplainView(blocks, fileData, maxRows)
+	}
+
 	var lines []string
 	label := "Input Data"
 
@@ -59,6 +63,25 @@ func RenderPreview(blocks []pipeline.Block, selectedIdx int, width int, fileData
 		raw = append(raw, DimStyle.Render(fmt.Sprintf(" ...%d more rows", total-maxRows)))
 	}
 	return header + "\n" + strings.Join(raw, "\n")
+}
+
+func renderExplainView(blocks []pipeline.Block, fileData string, maxRows int) string {
+	header := PreviewHeaderStyle.Render(" EXPLAIN  Pipeline walkthrough")
+	if len(blocks) == 0 {
+		return header + "\n" + DimStyle.Render("  Add blocks to see explanation")
+	}
+	steps := pipeline.ExplainPipeline(blocks, fileData)
+	var rows []string
+	for _, s := range steps {
+		label := LabelStyle.Render(fmt.Sprintf("  Step %d: %s", s.StepNum, s.Command))
+		summary := ValueStyle.Render(fmt.Sprintf("    \"%s\"", s.Summary))
+		rowCount := DimStyle.Render(fmt.Sprintf("    %d rows -> %d rows", s.InputRows, s.OutputRows))
+		rows = append(rows, label, summary, rowCount)
+	}
+	if len(rows) > maxRows {
+		rows = rows[:maxRows]
+	}
+	return header + "\n" + strings.Join(rows, "\n")
 }
 
 func renderTable(lines []string, maxWidth int) string {

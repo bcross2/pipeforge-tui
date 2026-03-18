@@ -26,6 +26,7 @@ type Model struct {
 	orderedCmds     []string
 	FileName        string
 	FileData        string
+	ShowExplain     bool
 }
 
 func New(fileName, fileData string) Model {
@@ -63,6 +64,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.PipelineCursor = 0
 			m.TextInputs = nil
 			return m, nil
+		case "e":
+			if !m.Editing {
+				m.ShowExplain = !m.ShowExplain
+				return m, nil
+			}
 		case "tab":
 			if !m.Editing {
 				m.ActivePanel = (m.ActivePanel + 1) % 3
@@ -336,5 +342,6 @@ func (m Model) View() string {
 		Inputs:          m.TextInputs,
 		FileName:        m.FileName,
 		FileData:        m.FileData,
+		ShowExplain:     m.ShowExplain,
 	})
 }

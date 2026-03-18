@@ -29,6 +29,7 @@ type LayoutParams struct {
 	Inputs          []textinput.Model
 	FileName        string
 	FileData        string
+	ShowExplain     bool
 }
 
 func RenderLayout(p LayoutParams) string {
@@ -96,7 +97,7 @@ func RenderLayout(p LayoutParams) string {
 	if previewRows < 2 {
 		previewRows = 2
 	}
-	preview := RenderPreview(p.Blocks, p.SelectedIdx, canvasWidth-4, p.FileData, previewRows)
+	preview := RenderPreview(p.Blocks, p.SelectedIdx, canvasWidth-4, p.FileData, previewRows, p.ShowExplain)
 
 	// Stack canvas + preview vertically in the center column
 	centerCol := lipgloss.JoinVertical(lipgloss.Left,
@@ -112,7 +113,7 @@ func RenderLayout(p LayoutParams) string {
 	middle := lipgloss.JoinHorizontal(lipgloss.Top, libBox, centerCol, inspBox)
 
 	// Help bar
-	help := HelpStyle.Width(w).Render("  tab  enter  d  ctrl+x  q")
+	help := HelpStyle.Width(w).Render("  tab  enter  d  e  ctrl+x  q")
 
 	return lipgloss.JoinVertical(lipgloss.Left, topBar, middle, help)
 }

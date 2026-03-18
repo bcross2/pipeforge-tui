@@ -60,6 +60,39 @@ func GenerateCommand(blocks []Block, inputFile string) string {
 			}
 			cmd = strings.Join(pieces, " ")
 
+		case "group":
+			keyCol := getString(c, "keyCol")
+			if keyCol == "" {
+				keyCol = "3"
+			}
+			valCol := getString(c, "valCol")
+			if valCol == "" {
+				valCol = "4"
+			}
+			agg := getString(c, "agg")
+			if agg == "" {
+				agg = "sum"
+			}
+			var body string
+			switch agg {
+			case "count":
+				body = fmt.Sprintf("{count[$%s]++} END{for(k in count) print k,count[k]}", keyCol)
+			case "avg":
+				body = fmt.Sprintf("{sum[$%s]+=$%s; count[$%s]++} END{for(k in sum) print k,sum[k]/count[k]}", keyCol, valCol, keyCol)
+			default: // sum
+				body = fmt.Sprintf("{sum[$%s]+=$%s} END{for(k in sum) print k,sum[k]}", keyCol, valCol)
+			}
+			delim := getString(c, "delimiter")
+			pieces := []string{"awk"}
+			if delim != "" {
+				pieces = append(pieces, "-F"+ShellQuote(delim))
+			}
+			pieces = append(pieces, ShellQuote(body))
+			if file != "" {
+				pieces = append(pieces, file)
+			}
+			cmd = strings.Join(pieces, " ")
+
 		case "cut":
 			f := getString(c, "fields")
 			if f == "" {

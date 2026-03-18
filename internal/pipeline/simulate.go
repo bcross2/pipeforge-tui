@@ -66,6 +66,71 @@ func SimulateStep(lines []string, block Block) []string {
 		}
 		return result
 
+	case "group":
+		keyIdx := 2 // default: column 3 (0-indexed)
+		if k := getString(c, "keyCol"); k != "" {
+			if n, err := strconv.Atoi(k); err == nil {
+				keyIdx = n - 1
+			}
+		}
+		valIdx := 3 // default: column 4 (0-indexed)
+		if v := getString(c, "valCol"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				valIdx = n - 1
+			}
+		}
+		agg := getString(c, "agg")
+		if agg == "" {
+			agg = "sum"
+		}
+		delim := getString(c, "delimiter")
+		if delim == "" {
+			delim = ","
+		}
+		type groupAcc struct {
+			sum   float64
+			count int
+		}
+		groups := make(map[string]*groupAcc)
+		var order []string
+		for _, line := range lines {
+			fields := strings.Split(line, delim)
+			if keyIdx >= len(fields) {
+				continue
+			}
+			key := fields[keyIdx]
+			val := 0.0
+			if valIdx < len(fields) {
+				val, _ = strconv.ParseFloat(strings.TrimSpace(fields[valIdx]), 64)
+			}
+			if _, ok := groups[key]; !ok {
+				groups[key] = &groupAcc{}
+				order = append(order, key)
+			}
+			groups[key].sum += val
+			groups[key].count++
+		}
+		var result []string
+		for _, key := range order {
+			g := groups[key]
+			switch agg {
+			case "sum":
+				if g.sum == float64(int(g.sum)) {
+					result = append(result, fmt.Sprintf("%s%s%.0f", key, delim, g.sum))
+				} else {
+					result = append(result, fmt.Sprintf("%s%s%.2f", key, delim, g.sum))
+				}
+			case "count":
+				result = append(result, fmt.Sprintf("%s%s%d", key, delim, g.count))
+			case "avg":
+				avg := g.sum / float64(g.count)
+				result = append(result, fmt.Sprintf("%s%s%.2f", key, delim, avg))
+			default:
+				result = append(result, fmt.Sprintf("%s%s%.0f", key, delim, g.sum))
+			}
+		}
+		return result
+
 	case "cut":
 		f := getString(c, "fields")
 		if f == "" {

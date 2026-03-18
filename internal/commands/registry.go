@@ -67,6 +67,27 @@ var Registry = map[string]CommandDef{
 			{Key: "delete", Type: FieldCheck, Label: "Delete chars (-d)"},
 		},
 	},
+	"group": {
+		Label: "group", Excel: "Pivot / GROUP BY", Group: "aggregate", Icon: "Gr",
+		Defaults: map[string]any{"keyCol": "3", "aggPreset": "", "agg": "sum", "valCol": "4", "delimiter": ","},
+		Config: []ConfigField{
+			{
+				Key: "aggPreset", Type: FieldSelect, Label: "Quick setup",
+				Hint: "CSV columns: $1=date, $2=product, $3=region, $4=amount",
+				Options: []SelectOption{
+					{Value: "", Label: "Custom"},
+					{Value: "sum_by_region", Label: "Sum amount by region"},
+					{Value: "sum_by_product", Label: "Sum amount by product"},
+					{Value: "count_by_region", Label: "Count rows by region"},
+					{Value: "count_by_product", Label: "Count rows by product"},
+				},
+			},
+			{Key: "keyCol", Type: FieldText, Label: "Group by column", Placeholder: "e.g. 3 (region)"},
+			{Key: "agg", Type: FieldText, Label: "Aggregation (sum/count/avg)", Placeholder: "sum"},
+			{Key: "valCol", Type: FieldText, Label: "Value column to aggregate", Placeholder: "e.g. 4 (amount)"},
+			{Key: "delimiter", Type: FieldText, Label: "Delimiter (-F)", Placeholder: ","},
+		},
+	},
 	"sort": {
 		Label: "sort", Excel: "Sort A-Z / Z-A", Group: "aggregate", Icon: "St",
 		Defaults: map[string]any{"key": "", "numeric": false, "reverse": false, "delimiter": ","},
@@ -139,7 +160,7 @@ func OrderedCommands() []string {
 }
 
 func commandKeysForGroup(group string) []string {
-	order := []string{"grep", "awk", "cut", "sed", "tr", "sort", "uniq", "wc", "head", "tail", "tee", "xargs"}
+	order := []string{"grep", "awk", "cut", "sed", "tr", "group", "sort", "uniq", "wc", "head", "tail", "tee", "xargs"}
 	var result []string
 	for _, k := range order {
 		if def, ok := Registry[k]; ok && def.Group == group {

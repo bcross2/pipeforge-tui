@@ -87,6 +87,14 @@ func GetConfigPreview(b Block) string {
 			return ""
 		}
 		return fmt.Sprintf("%s {%s}", cond, act)
+	case "group":
+		keyCol := b.GetString("keyCol")
+		agg := b.GetString("agg")
+		valCol := b.GetString("valCol")
+		if keyCol == "" {
+			return ""
+		}
+		return fmt.Sprintf("col %s [%s] col %s", keyCol, agg, valCol)
 	case "cut":
 		f := b.GetString("fields")
 		if f == "" {
