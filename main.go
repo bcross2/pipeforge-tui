@@ -8,9 +8,7 @@ import (
 	"strings"
 
 	"github.com/bcross2/pipeforge-tui/internal/data"
-	"github.com/bcross2/pipeforge-tui/internal/model"
 	"github.com/bcross2/pipeforge-tui/internal/pipeline"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 const maxPreviewLines = 200
@@ -20,7 +18,7 @@ func main() {
 
 	fileName := ""
 	spec := ""
-	mode := "tui" // tui, build, preview, run, schema, validate, explain, data
+	mode := "schema" // build, preview, run, schema, validate, explain, data
 	jsonMode := false
 
 	for i := 0; i < len(args); i++ {
@@ -118,15 +116,6 @@ func main() {
 	fileData, displayName := loadFileData(fileName, jsonMode)
 
 	switch mode {
-	case "tui":
-		if jsonMode {
-			exitJSONError("--json cannot be used with TUI mode")
-		}
-		p := tea.NewProgram(model.New(displayName, fileData), tea.WithAltScreen())
-		if _, err := p.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
 	case "build":
 		blocks, err := resolveBlocks(spec, jsonMode)
 		if err != nil {
@@ -271,54 +260,26 @@ func loadFileData(fileName string, jsonMode bool) (fileData string, displayName 
 }
 
 func printHelp() {
-	fmt.Println(`PipeForge — Visual Linux Pipeline Builder
+	fmt.Println(`PipeForge — CLI Pipeline Engine
 
 Usage:
-  pipeforge [FILE]              Launch TUI (with optional file)
-  pipeforge --build SPEC        Output the shell command
-  pipeforge --preview SPEC      Show simulated data preview
-  pipeforge --run SPEC          Build and execute the command
-
-Agent modes:
   pipeforge --schema            Dump command registry as JSON
-  pipeforge --data              Show input data (columns, rows)
+  pipeforge --data -f FILE      Show input data (columns, rows)
   pipeforge --validate          Validate pipeline JSON from stdin
-  pipeforge --explain           Explain pipeline steps with row counts
+  pipeforge --explain -f FILE   Explain pipeline steps with row counts
+  pipeforge --build             Output the shell command
+  pipeforge --preview -f FILE   Show simulated data preview
+  pipeforge --run -f FILE       Build and execute the command
 
 Options:
   --file, -f FILE       Input file (default: built-in sample CSV)
-  --json                JSON mode: read pipeline from stdin, output JSON
+  --json                JSON output mode
   --help, -h            Show this help
 
-SPEC format:
-  "command:key=value,flag | command:key=value"
-
-  Commands: grep, awk, cut, sed, tr, sort, uniq, wc, head, tail, tee, xargs, datamash, comm
-
-  Boolean flags (no =value):
-    grep:pattern=hello,ignoreCase,invert
-    sort:key=4,numeric,reverse
-    uniq:count
-
-  Text/number options (key=value):
-    grep:pattern=North
-    cut:fields=1;3
-    head:lines=10
-
-  Pipe steps with |
-
 Examples:
-  pipeforge data.csv
-  pipeforge --file data.csv --build "grep:pattern=North | sort:key=4,numeric"
-  pipeforge --file data.csv --preview "cut:fields=1;3 | sort | uniq:count"
-  pipeforge --file data.csv --run "grep:pattern=error | wc:lines"
-  pipeforge --build "grep:pattern=get,ignoreCase | sort | uniq:count"
-
-JSON mode (for agents & scripts):
   pipeforge --schema
   echo '[...]' | pipeforge --validate
-  echo '[...]' | pipeforge --explain -f data.csv
-  echo '[...]' | pipeforge --build --json
+  echo '[...]' | pipeforge --explain --json -f data.csv
   echo '[...]' | pipeforge --preview --json -f data.csv
-  cat pipeline.json | pipeforge --run --json -f data.csv`)
+  echo '[...]' | pipeforge --run --json -f data.csv`)
 }
